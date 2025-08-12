@@ -1,5 +1,6 @@
 package com.horizon.service;
 
+import com.horizon.dto.CommentAdminDTO;
 import com.horizon.dto.CommentDTO;
 import com.horizon.entity.User;
 import com.horizon.entity.Comment;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -54,8 +56,16 @@ public void deleteComment(User user, Long commentId) {
                 .collect(Collectors.toList());
     }
 
-    public List<Comment> getAllComments() {
-        return commentRepository.findAll();
+    public List<CommentAdminDTO> getAllCommentsForAdmin() {
+        return commentRepository.findAll().stream()
+                .map(c -> new CommentAdminDTO(
+                        c.getUser().getUsername(),
+                        c.getContent(),
+                        c.getCreatedAt(),
+                        c.getImdbId(),
+                        c.getId()
+                ))
+                .collect(Collectors.toList());
     }
 
     public void deleteComment(Long id) {

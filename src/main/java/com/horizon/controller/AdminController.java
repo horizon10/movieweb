@@ -1,8 +1,13 @@
 package com.horizon.controller;
 
+import com.horizon.dto.CommentAdminDTO;
+import com.horizon.dto.CommentDTO;
+import com.horizon.dto.RoleUpdateRequest;
+import com.horizon.dto.UserDto;
 import com.horizon.entity.Comment;
 import com.horizon.entity.Role;
 import com.horizon.entity.User;
+import com.horizon.repository.CommentRepository;
 import com.horizon.service.CommentService;
 import com.horizon.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +25,12 @@ public class AdminController {
 
     private final UserService userService;
     private final CommentService commentService;
+    private final CommentRepository commentRepository;
 
     @GetMapping("/users")
-    public ResponseEntity<?> getAllUsers() {
-        return ResponseEntity.ok(userService.getAll());
+    public ResponseEntity<UserDto> getAllUsers() {
+        List<UserDto> users=userService.getAll();
+        return ResponseEntity.ok().body(users.get(0));
     }
 
     @DeleteMapping("/users/{id}")
@@ -32,14 +39,16 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
     @PutMapping("/users/{id}/role")
-    public User updateUserRole(@PathVariable Long id, @RequestBody Role role) {
-        return userService.updateRole(id, role);
+    public User updateUserRole(@PathVariable Long id, @RequestBody RoleUpdateRequest request) {
+        return userService.updateRole(id, request.getRole());
     }
 
     @GetMapping("/comments")
-    public List<Comment> getAllComments() {
-        return commentService.getAllComments();
+    public ResponseEntity<List<CommentAdminDTO>> getAllComments() {
+        List<CommentAdminDTO> comments = commentService.getAllCommentsForAdmin();
+        return ResponseEntity.ok(comments);
     }
+
 
     @DeleteMapping("/comments/{id}")
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {

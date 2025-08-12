@@ -1,5 +1,7 @@
 package com.horizon.service;
 
+import com.horizon.dto.CommentAdminDTO;
+import com.horizon.dto.UserDto;
 import com.horizon.entity.Role;
 import com.horizon.entity.User;
 import com.horizon.repository.UserRepository;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,16 +21,30 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public User getByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + username));
     }
 
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Email bulunamadı: " + email));
+    }
     public User save(User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
-    public List<User> getAll() {
-        return userRepository.findAll();
+    public List<UserDto> getAll() {
+        return userRepository.findAll().stream()
+                .map(c -> new UserDto(
+                        c.getId(),
+                        c.getEmail(),
+                        c.getUsername(),
+                        c.getPassword(),
+                        c.getImage(),
+                        c.getRole()
+                ))
+                .collect(Collectors.toList());
     }
 
     public void deleteById(Long id) {
@@ -41,7 +58,7 @@ public class UserService {
         // Username benzersizlik kontrolü - sadece değiştirildiyse kontrol et
         if (!existing.getUsername().equals(updatedUser.getUsername())) {
             Optional<User> userWithSameUsername = userRepository.findByUsername(updatedUser.getUsername());
-            if (userWithSameUsername.isPresent()) {
+            if (userWithSameUsername.isPresent()&& !userWithSameUsername.get().getId().equals(id)) {
                 throw new IllegalArgumentException("Username already exists");
             }
         }
@@ -92,7 +109,4 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User getByEmail(String email) {
-     return userRepository.findByEmail(email).orElseThrow();
-    }
 }

@@ -1,5 +1,6 @@
 package com.horizon.service;
 
+import com.horizon.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -20,7 +21,7 @@ public class JwtService {
     @Value("${security.jwt.secret}")
     private String SECRET_KEY;
 
-    public String findUsername(String token) {
+    public String findUserID(String token) {
         return exportToken(token, Claims::getSubject);
     }
 
@@ -39,14 +40,19 @@ public class JwtService {
 
 
     public boolean tokenControl(String jwt, UserDetails userDetails) {
-        final String username = findUsername(jwt);
-        return (username.equals(userDetails.getUsername()) && !exportToken(jwt, Claims::getExpiration).before(new Date()));
+        final String userIdFromToken = findUserID(jwt);
+        // userDetails burada bizim User entity'sini taşımalı ki ID erişelim
+        if (userDetails instanceof User userEntity) {
+            return (userIdFromToken.equals(String.valueOf(userEntity.getId()))
+                    && !exportToken(jwt, Claims::getExpiration).before(new Date()));
+        }
+        return false;
     }
 
-    public String generateToken(UserDetails user) {
+    public String generateToken(User user) {
         return Jwts.builder()
                 .setClaims(new HashMap<>())
-                .setSubject(user.getUsername())
+                .setSubject(String.valueOf(user.getId()))
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
