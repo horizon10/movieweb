@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class CommentDTO {
     private String username;
-    private String userId;
+    private Long userId;
     private String content;
     private LocalDateTime createdAt;
     private String userImage;
@@ -19,13 +19,14 @@ public class CommentDTO {
 
 
     // Tüm alanları içeren constructor
-    public CommentDTO(String username, String content, LocalDateTime createdAt, String imdbId, Long id, String userImage) {
+    public CommentDTO(String username, String content, LocalDateTime createdAt, String imdbId, Long id, String userImage,Long userId) {
         this.username = username;
         this.content = content;
         this.createdAt = createdAt;
         this.imdbId = imdbId;
         this.userImage = userImage;
         this.id = id;
+        this.userId = userId;
     }
 }
 

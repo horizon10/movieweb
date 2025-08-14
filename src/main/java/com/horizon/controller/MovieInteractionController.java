@@ -4,12 +4,10 @@ package com.horizon.controller;
 import com.horizon.dto.CommentDTO;
 import com.horizon.dto.FavoriteDTO;
 import com.horizon.dto.RatingDTO;
+import com.horizon.entity.ContactMessage;
 import com.horizon.entity.Favorite;
 import com.horizon.entity.User;
-import com.horizon.service.CommentService;
-import com.horizon.service.FavoriteService;
-import com.horizon.service.RatingService;
-import com.horizon.service.UserService;
+import com.horizon.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +26,7 @@ public class MovieInteractionController {
     private final FavoriteService favoriteService;
     private final CommentService commentService;
     private final RatingService ratingService;
+    private final ContactMessageService contactMessageService;
 
 
     private User getCurrentUser() {
@@ -88,6 +87,14 @@ public class MovieInteractionController {
         commentService.deleteComment(getCurrentUser(),commentId);
         return ResponseEntity.ok().build();
     }
+    @PutMapping("/comment/{commentId}")
+    public ResponseEntity<Void> updateComment(
+            @PathVariable Long commentId,
+            @RequestBody String newContent) {
+        commentService.updateComment(getCurrentUser(), commentId, newContent);
+        return ResponseEntity.ok().build();
+    }
+
 
     // RATING
 
@@ -127,5 +134,12 @@ public class MovieInteractionController {
     public ResponseEntity<String> deleteRating(@PathVariable Long ratingId) {
         ratingService.deleteRating(getCurrentUser(),ratingId);
         return ResponseEntity.ok("Rating başarıyla silindi");
+    }
+
+
+    @PostMapping("/contact")
+    public ResponseEntity<String> sendMessage(@RequestBody ContactMessage message) {
+        contactMessageService.saveMessage(message);
+        return ResponseEntity.ok("Mesajınız başarıyla gönderildi!");
     }
 }

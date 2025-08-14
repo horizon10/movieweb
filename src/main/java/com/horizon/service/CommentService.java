@@ -25,7 +25,8 @@ public class CommentService {
                         c.getCreatedAt(),
                         c.getImdbId(),
                         c.getId(),
-                        c.getUser().getImage()))
+                        c.getUser().getImage(),
+                        c.getUser().getId()))
                 .collect(Collectors.toList());
     }
 
@@ -52,7 +53,8 @@ public void deleteComment(User user, Long commentId) {
                         c.getCreatedAt(),
                         c.getImdbId(),
                         c.getId(),
-                        c.getUser().getImage()))
+                        c.getUser().getImage(),
+                        c.getUser().getId()))
                 .collect(Collectors.toList());
     }
 
@@ -70,6 +72,19 @@ public void deleteComment(User user, Long commentId) {
 
     public void deleteComment(Long id) {
         commentRepository.deleteById(id);
+    }
+
+    public void updateComment(User user, Long commentId, String newContent) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        // Yorumun kullanıcıya ait olduğunu kontrol et
+        if (!comment.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only update your own comments");
+        }
+
+        comment.setContent(newContent);
+        commentRepository.save(comment);
     }
 
 }
