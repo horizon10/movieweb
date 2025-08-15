@@ -1,9 +1,7 @@
 package com.horizon.controller;
 
 
-import com.horizon.dto.CommentDTO;
-import com.horizon.dto.FavoriteDTO;
-import com.horizon.dto.RatingDTO;
+import com.horizon.dto.*;
 import com.horizon.entity.ContactMessage;
 import com.horizon.entity.Favorite;
 import com.horizon.entity.User;
@@ -95,6 +93,19 @@ public class MovieInteractionController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/comment/{parentCommentId}/reply")
+    public ResponseEntity<CommentDTO> addReply(
+            @PathVariable Long parentCommentId,
+            @RequestBody String content) {
+        CommentDTO reply = commentService.addReply(getCurrentUser(), parentCommentId, content);
+        return ResponseEntity.ok(reply);
+    }
+
+    @GetMapping("/comment/{imdbId}/with-replies")
+    public ResponseEntity<List<CommentDTO>> getCommentsWithReplies(@PathVariable String imdbId) {
+        return ResponseEntity.ok(commentService.getCommentsWithReplies(imdbId));
+    }
+
 
     // RATING
 
@@ -142,4 +153,46 @@ public class MovieInteractionController {
         contactMessageService.saveMessage(message);
         return ResponseEntity.ok("Mesajınız başarıyla gönderildi!");
     }
+
+    // Yorum beğenme endpointleri
+    @PostMapping("/comment/{commentId}/like")
+    public ResponseEntity<Void> likeComment(@PathVariable Long commentId) {
+        commentService.likeComment(getCurrentUser(), commentId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/comment/{commentId}/like")
+    public ResponseEntity<Void> unlikeComment(@PathVariable Long commentId) {
+        commentService.unlikeComment(getCurrentUser(), commentId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/comment/{commentId}/likes")
+    public ResponseEntity<List<CommentLikeDTO>> getCommentLikes(@PathVariable Long commentId) {
+        return ResponseEntity.ok(commentService.getLikesForComment(commentId));
+    }
+
+    @GetMapping("/comment/{imdbId}/with-likes")
+    public ResponseEntity<List<CommentWithLikesDTO>> getCommentsWithLikes(@PathVariable String imdbId) {
+        User currentUser = null;
+        try {
+            currentUser = getCurrentUser();
+        } catch (Exception e) {
+            // Kullanıcı giriş yapmamışsa null olarak devam eder
+        }
+        return ResponseEntity.ok(commentService.getCommentsWithLikes(imdbId, currentUser));
+    }
+
+    @GetMapping("/comment/likes/user")
+    public ResponseEntity<List<CommentLikeDTO>> getUserLikes() {
+        User currentUser = getCurrentUser();
+        List<CommentLikeDTO> userLikes = commentService.getUserLikes(currentUser);
+        return ResponseEntity.ok(userLikes);
+    }
+    @GetMapping("/comment/{commentId}/like-details")
+    public ResponseEntity<CommentDTO> getCommentDetails(@PathVariable Long commentId) {
+        CommentDTO comment = commentService.getCommentById(commentId);
+        return ResponseEntity.ok(comment);
+    }
+
 }

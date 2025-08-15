@@ -2,8 +2,12 @@ package com.horizon.service;
 
 import com.horizon.dto.CommentAdminDTO;
 import com.horizon.dto.CommentDTO;
+import com.horizon.dto.CommentLikeDTO;
+import com.horizon.dto.CommentWithLikesDTO;
+import com.horizon.entity.CommentLike;
 import com.horizon.entity.User;
 import com.horizon.entity.Comment;
+import com.horizon.repository.CommentLikeRepository;
 import com.horizon.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CommentService {
     private final CommentRepository commentRepository;
+    private final CommentLikeRepository commentLikeRepository;
+    private final UserService userService;
 
     public List<CommentDTO> getUserComments(User user) {
         return commentRepository.findByUser(user).stream()
@@ -30,12 +36,12 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-public void deleteComment(User user, Long commentId) {
-    Comment comment=commentRepository.findById(commentId)
-            .orElseThrow(()->new RuntimeException("Comment not found"));
+    public void deleteComment(User user, Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
 
-    commentRepository.delete(comment);
-}
+        commentRepository.delete(comment);
+    }
 
     public void addComment(User user, String imdbId, String content) {
         Comment comment = new Comment();
@@ -87,4 +93,138 @@ public void deleteComment(User user, Long commentId) {
         commentRepository.save(comment);
     }
 
+
+    public void likeComment(User user, Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        commentLikeRepository.findByCommentIdAndUserId(commentId, user.getId())
+                .ifPresentOrElse(like -> {
+                    // Zaten beğenmiş -> unlike yap
+                    commentLikeRepository.delete(like);
+                }, () -> {
+                    // Daha önce beğenmemiş -> like ekle
+                    CommentLike newLike = new CommentLike();
+                    newLike.setComment(comment);
+                    newLike.setUser(user);
+                    commentLikeRepository.save(newLike);
+                });
+    }
+
+    public void unlikeComment(User user, Long commentId) {
+        CommentLike like = commentLikeRepository.findByCommentIdAndUserId(commentId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Like not found"));
+        commentLikeRepository.delete(like);
+    }
+
+    public List<CommentLikeDTO> getLikesForComment(Long commentId) {
+        return commentLikeRepository.findByCommentId(commentId).stream()
+                .map(like -> new CommentLikeDTO(
+                        like.getId(),
+                        like.getComment().getId(),
+                        like.getUser().getId(),
+                        like.getUser().getUsername(),
+                        like.getLikedAt(),
+                        like.getComment().getContent(), like.getComment().getImdbId(), like.getComment().getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    public List<CommentWithLikesDTO> getCommentsWithLikes(String imdbId, User currentUser) {
+        return commentRepository.findByImdbId(imdbId).stream()
+                .map(comment -> {
+                    int likeCount = commentLikeRepository.countByCommentId(comment.getId());
+                    boolean isLiked = currentUser != null &&
+                            commentLikeRepository.findByCommentIdAndUserId(comment.getId(), currentUser.getId()).isPresent();
+
+                    return new CommentWithLikesDTO(
+                            comment.getUser().getUsername(),
+                            comment.getUser().getId(),
+                            comment.getContent(),
+                            comment.getCreatedAt(),
+                            comment.getImdbId(),
+                            comment.getId(),
+                            comment.getUser().getImage(),
+                            likeCount,
+                            isLiked,
+                            isLiked ? getLikesForComment(comment.getId()) : null
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<CommentLikeDTO> getUserLikes(User user) {
+        return commentLikeRepository.findByUserId(user.getId()).stream()
+                .map(like -> {
+                    Comment comment = like.getComment();
+                    return new CommentLikeDTO(
+                            like.getId(),
+                            comment.getId(),
+                            like.getUser().getId(),
+                            like.getUser().getUsername(),
+                            like.getLikedAt(),
+                            comment.getContent(),        // Yorum içeriği
+                            comment.getImdbId(),         // Film ID'si
+                            comment.getCreatedAt()       // Yorumun oluşturulma tarihi
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+    public CommentDTO getCommentById(Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        return new CommentDTO(
+                comment.getUser().getUsername(),
+                comment.getContent(),
+                comment.getCreatedAt(),
+                comment.getImdbId(),
+                comment.getId(),
+                comment.getUser().getImage(),
+                comment.getUser().getId()
+        );
+    }
+    // CommentService.java'ya yanıt ekleme metodu ekleyin
+    public CommentDTO addReply(User user, Long parentCommentId, String content) {
+        Comment parentComment = commentRepository.findById(parentCommentId)
+                .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+
+        Comment reply = new Comment();
+        reply.setUser(user);
+        reply.setImdbId(parentComment.getImdbId()); // Aynı film için yanıt
+        reply.setContent(content);
+        reply.setParentComment(parentComment);
+
+        commentRepository.save(reply);
+
+        return convertToDTO(reply);
+    }
+
+    private CommentDTO convertToDTO(Comment comment) {
+        return new CommentDTO(
+                comment.getUser().getUsername(),
+                comment.getContent(),
+                comment.getCreatedAt(),
+                comment.getImdbId(),
+                comment.getId(),
+                comment.getUser().getImage(),
+                comment.getUser().getId(),
+                comment.getParentComment() != null ? comment.getParentComment().getId() : null
+        );
+    }
+
+    // Yanıtları içeren yorumları getirme
+    public List<CommentDTO> getCommentsWithReplies(String imdbId) {
+        List<Comment> topLevelComments = commentRepository.findByImdbIdAndParentCommentIsNull(imdbId);
+        return topLevelComments.stream()
+                .map(this::convertToDTOWithReplies)
+                .collect(Collectors.toList());
+    }
+
+    private CommentDTO convertToDTOWithReplies(Comment comment) {
+        CommentDTO dto = convertToDTO(comment);
+        dto.setReplies(comment.getReplies().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList()));
+        return dto;
+    }
 }

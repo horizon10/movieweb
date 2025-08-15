@@ -13,4 +13,5 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByImdbId(String imdbId);
     // CommentRepository.java'ya ekle
     List<Comment> findByUser(User user);
+    List<Comment> findByImdbIdAndParentCommentIsNull(String imdbId);
 }

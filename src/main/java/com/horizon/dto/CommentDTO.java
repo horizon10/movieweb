@@ -1,11 +1,8 @@
 package com.horizon.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class CommentDTO {
@@ -16,17 +13,23 @@ public class CommentDTO {
     private String userImage;
     private String imdbId;
     private Long id;
+    private Long parentCommentId; // Yanıtlanan yorumun ID'si
+    private List<CommentDTO> replies; // Yanıtlar listesi
 
+    public CommentDTO(String username, String content, LocalDateTime createdAt,
+                      String imdbId, Long id, String userImage, Long userId) {
+        this(username, content, createdAt, imdbId, id, userImage, userId, null);
+    }
 
-    // Tüm alanları içeren constructor
-    public CommentDTO(String username, String content, LocalDateTime createdAt, String imdbId, Long id, String userImage,Long userId) {
+    public CommentDTO(String username, String content, LocalDateTime createdAt,
+                      String imdbId, Long id, String userImage, Long userId, Long parentCommentId) {
         this.username = username;
         this.content = content;
         this.createdAt = createdAt;
         this.imdbId = imdbId;
-        this.userImage = userImage;
         this.id = id;
+        this.userImage = userImage;
         this.userId = userId;
+        this.parentCommentId = parentCommentId;
     }
 }
-
