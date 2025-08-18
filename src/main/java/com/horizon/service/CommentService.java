@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
 public class CommentService {
@@ -40,7 +39,15 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
 
-        commentRepository.delete(comment);
+        // Eğer bu yorum bir yanıta sahipse, sadece içeriğini sil
+        if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
+            comment.setContent("[DELETED]");
+            comment.setDeleted(true);
+            commentRepository.save(comment);
+        } else {
+            // Yanıtı yoksa tamamen sil
+            commentRepository.delete(comment);
+        }
     }
 
     public void addComment(User user, String imdbId, String content) {
@@ -48,6 +55,7 @@ public class CommentService {
         comment.setUser(user);
         comment.setImdbId(imdbId);
         comment.setContent(content);
+        comment.setDeleted(false);
         commentRepository.save(comment);
     }
 
@@ -93,7 +101,6 @@ public class CommentService {
         commentRepository.save(comment);
     }
 
-
     public void likeComment(User user, Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
@@ -125,31 +132,46 @@ public class CommentService {
                         like.getUser().getId(),
                         like.getUser().getUsername(),
                         like.getLikedAt(),
-                        like.getComment().getContent(), like.getComment().getImdbId(), like.getComment().getCreatedAt()))
+                        like.getComment().getContent(),
+                        like.getComment().getImdbId(),
+                        like.getComment().getCreatedAt()))
                 .collect(Collectors.toList());
     }
 
     public List<CommentWithLikesDTO> getCommentsWithLikes(String imdbId, User currentUser) {
-        return commentRepository.findByImdbId(imdbId).stream()
-                .map(comment -> {
-                    int likeCount = commentLikeRepository.countByCommentId(comment.getId());
-                    boolean isLiked = currentUser != null &&
-                            commentLikeRepository.findByCommentIdAndUserId(comment.getId(), currentUser.getId()).isPresent();
+        // Sadece ana yorumları (parent comment'i null olan) getir
+        List<Comment> topLevelComments = commentRepository.findByImdbIdAndParentCommentIsNull(imdbId);
 
-                    return new CommentWithLikesDTO(
-                            comment.getUser().getUsername(),
-                            comment.getUser().getId(),
-                            comment.getContent(),
-                            comment.getCreatedAt(),
-                            comment.getImdbId(),
-                            comment.getId(),
-                            comment.getUser().getImage(),
-                            likeCount,
-                            isLiked,
-                            isLiked ? getLikesForComment(comment.getId()) : null
-                    );
-                })
+        return topLevelComments.stream()
+                .map(comment -> convertToCommentWithLikesDTO(comment, currentUser))
                 .collect(Collectors.toList());
+    }
+
+    private CommentWithLikesDTO convertToCommentWithLikesDTO(Comment comment, User currentUser) {
+        int likeCount = commentLikeRepository.countByCommentId(comment.getId());
+        boolean isLiked = currentUser != null &&
+                commentLikeRepository.findByCommentIdAndUserId(comment.getId(), currentUser.getId()).isPresent();
+
+        // Yanıtları da işle
+        List<CommentWithLikesDTO> replies = comment.getReplies().stream()
+                .map(reply -> convertToCommentWithLikesDTO(reply, currentUser))
+                .collect(Collectors.toList());
+
+        CommentWithLikesDTO dto = new CommentWithLikesDTO(
+                comment.getUser().getUsername(),
+                comment.getUser().getId(),
+                comment.getContent(),
+                comment.getCreatedAt(),
+                comment.getImdbId(),
+                comment.getId(),
+                comment.getUser().getImage(),
+                likeCount,
+                isLiked,
+                isLiked ? getLikesForComment(comment.getId()) : null
+        );
+
+        dto.setReplies(replies);
+        return dto;
     }
 
     public List<CommentLikeDTO> getUserLikes(User user) {
@@ -162,13 +184,14 @@ public class CommentService {
                             like.getUser().getId(),
                             like.getUser().getUsername(),
                             like.getLikedAt(),
-                            comment.getContent(),        // Yorum içeriği
-                            comment.getImdbId(),         // Film ID'si
-                            comment.getCreatedAt()       // Yorumun oluşturulma tarihi
+                            comment.getContent(),
+                            comment.getImdbId(),
+                            comment.getCreatedAt()
                     );
                 })
                 .collect(Collectors.toList());
     }
+
     public CommentDTO getCommentById(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
@@ -183,16 +206,17 @@ public class CommentService {
                 comment.getUser().getId()
         );
     }
-    // CommentService.java'ya yanıt ekleme metodu ekleyin
+
     public CommentDTO addReply(User user, Long parentCommentId, String content) {
         Comment parentComment = commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new RuntimeException("Parent comment not found"));
 
         Comment reply = new Comment();
         reply.setUser(user);
-        reply.setImdbId(parentComment.getImdbId()); // Aynı film için yanıt
+        reply.setImdbId(parentComment.getImdbId());
         reply.setContent(content);
         reply.setParentComment(parentComment);
+        reply.setDeleted(false);
 
         commentRepository.save(reply);
 
@@ -212,7 +236,6 @@ public class CommentService {
         );
     }
 
-    // Yanıtları içeren yorumları getirme
     public List<CommentDTO> getCommentsWithReplies(String imdbId) {
         List<Comment> topLevelComments = commentRepository.findByImdbIdAndParentCommentIsNull(imdbId);
         return topLevelComments.stream()

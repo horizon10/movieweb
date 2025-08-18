@@ -15,6 +15,10 @@ public class FavoriteService {
     public boolean isMovieFavorite(User user, String imdbId) {
         return favoriteRepository.existsByUserIdAndImdbId(user.getId(), imdbId);
     }
+
+    public List<String> getMostFavoritedMovies(int limit) {
+        return favoriteRepository.findMostFavoritedMovies(limit);
+    }
     public Favorite addFavorite(User user, String imdbId) {
         if (isMovieFavorite(user, imdbId)) {
             throw new IllegalStateException("Film zaten favorilerinizde");

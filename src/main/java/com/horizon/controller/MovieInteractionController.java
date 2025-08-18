@@ -59,7 +59,10 @@ public class MovieInteractionController {
 
         return ResponseEntity.ok(dtos);
     }
-
+    @GetMapping("/favorite/most-favorited")
+    public ResponseEntity<List<String>> getMostFavoritedMovies() {
+        return ResponseEntity.ok(favoriteService.getMostFavoritedMovies(10));
+    }
 
     // COMMENT
 
@@ -174,12 +177,7 @@ public class MovieInteractionController {
 
     @GetMapping("/comment/{imdbId}/with-likes")
     public ResponseEntity<List<CommentWithLikesDTO>> getCommentsWithLikes(@PathVariable String imdbId) {
-        User currentUser = null;
-        try {
-            currentUser = getCurrentUser();
-        } catch (Exception e) {
-            // Kullanıcı giriş yapmamışsa null olarak devam eder
-        }
+        User currentUser = getCurrentUserSafely();
         return ResponseEntity.ok(commentService.getCommentsWithLikes(imdbId, currentUser));
     }
 
@@ -195,4 +193,24 @@ public class MovieInteractionController {
         return ResponseEntity.ok(comment);
     }
 
+
+    @GetMapping("/comment/{imdbId}/with-likes-and-replies")
+    public ResponseEntity<List<CommentWithLikesDTO>> getCommentsWithLikesAndReplies(@PathVariable String imdbId) {
+        User currentUser = getCurrentUserSafely();
+        return ResponseEntity.ok(commentService.getCommentsWithLikes(imdbId, currentUser));
+    }
+
+    private User getCurrentUserSafely() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() ||
+                    "anonymousUser".equals(authentication.getName())) {
+                return null;
+            }
+            String username = authentication.getName();
+            return userService.getByUsername(username);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
