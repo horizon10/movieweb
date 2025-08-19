@@ -16,4 +16,6 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     boolean existsByUserIdAndImdbId(Long userId, String imdbId);
     @Query("SELECT f.imdbId FROM Favorite f GROUP BY f.imdbId ORDER BY COUNT(f.id) DESC")
     List<String> findMostFavoritedMovies(@Param("limit") int limit);
+    Long countByImdbId(String imdbId);
+
 }

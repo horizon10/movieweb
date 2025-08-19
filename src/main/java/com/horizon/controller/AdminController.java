@@ -4,6 +4,7 @@ import com.horizon.dto.CommentAdminDTO;
 import com.horizon.dto.CommentDTO;
 import com.horizon.dto.RoleUpdateRequest;
 import com.horizon.dto.UserDto;
+import com.horizon.dto.StatisticsDTO;
 import com.horizon.entity.Comment;
 import com.horizon.entity.ContactMessage;
 import com.horizon.entity.Role;
@@ -12,6 +13,7 @@ import com.horizon.repository.CommentRepository;
 import com.horizon.service.CommentService;
 import com.horizon.service.ContactMessageService;
 import com.horizon.service.UserService;
+import com.horizon.service.StatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +30,7 @@ public class AdminController {
     private final UserService userService;
     private final CommentService commentService;
     private final ContactMessageService contactMessageService;
+    private final StatisticsService statisticsService;
 
     @GetMapping("/contact")
     public ResponseEntity<List<ContactMessage>> getAllMessages() {
@@ -40,11 +43,10 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-
     @GetMapping("/users")
-    public ResponseEntity<UserDto> getAllUsers() {
-        List<UserDto> users=userService.getAll();
-        return ResponseEntity.ok().body(users.get(0));
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        List<UserDto> users = userService.getAll();
+        return ResponseEntity.ok(users);
     }
 
     @DeleteMapping("/users/{id}")
@@ -52,6 +54,7 @@ public class AdminController {
         userService.deleteById(id);
         return ResponseEntity.ok().build();
     }
+
     @PutMapping("/users/{id}/role")
     public User updateUserRole(@PathVariable Long id, @RequestBody RoleUpdateRequest request) {
         return userService.updateRole(id, request.getRole());
@@ -63,10 +66,16 @@ public class AdminController {
         return ResponseEntity.ok(comments);
     }
 
-
     @DeleteMapping("/comments/{id}")
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
         commentService.deleteComment(id);
         return ResponseEntity.ok().build();
+    }
+
+    // Yeni İstatistik Endpoint'i
+    @GetMapping("/statistics")
+    public ResponseEntity<StatisticsDTO> getStatistics() {
+        StatisticsDTO statistics = statisticsService.getAdminStatistics();
+        return ResponseEntity.ok(statistics);
     }
 }
