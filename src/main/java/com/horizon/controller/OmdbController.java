@@ -64,4 +64,32 @@ public class OmdbController {
             @RequestParam(defaultValue = "1") int page) {
         return ResponseEntity.ok(omdbService.advancedSearch(title, type, year, page));
     }
+
+    // Benzer filmleri getir
+    @GetMapping("/similar")
+    public ResponseEntity<OmdbSearchResponse> getSimilarMovies(
+            @RequestParam String title,
+            @RequestParam(defaultValue = "4") int count) {
+        return ResponseEntity.ok(omdbService.getSimilarMovies(title, count));
+    }
+
+    // Tür bazlı benzer filmler
+    @GetMapping("/similar/genre")
+    public ResponseEntity<OmdbSearchResponse> getSimilarMoviesByGenre(
+            @RequestParam String genre,
+            @RequestParam(defaultValue = "4") int count) {
+        return ResponseEntity.ok(omdbService.getSimilarMoviesByGenre(genre, count));
+    }
+
+    // Gelişmiş benzer film önerisi
+    @GetMapping("/similar/advanced")
+    public ResponseEntity<OmdbSearchResponse> getAdvancedSimilarMovies(
+            @RequestParam String imdbId,
+            @RequestParam(defaultValue = "4") int count) {
+        OmdbSearchResponse response = omdbService.getAdvancedSimilarMovies(imdbId, count);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(response);
+    }
 }

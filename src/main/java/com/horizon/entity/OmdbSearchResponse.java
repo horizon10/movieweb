@@ -19,20 +19,3 @@ public class OmdbSearchResponse {
     private String error;
 }
 
-@Data
-class OmdbSearchItem {
-    @JsonProperty("Title")
-    private String title;
-
-    @JsonProperty("Year")
-    private String year;
-
-    @JsonProperty("imdbID")
-    private String imdbID;
-
-    @JsonProperty("Type")
-    private String type;
-
-    @JsonProperty("Poster")
-    private String poster;
-}
