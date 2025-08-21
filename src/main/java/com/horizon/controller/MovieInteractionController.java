@@ -5,6 +5,7 @@ import com.horizon.dto.*;
 import com.horizon.entity.ContactMessage;
 import com.horizon.entity.Favorite;
 import com.horizon.entity.User;
+import com.horizon.entity.Watched;
 import com.horizon.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ public class MovieInteractionController {
     private final CommentService commentService;
     private final RatingService ratingService;
     private final ContactMessageService contactMessageService;
+    private final WatchedService watchedService;
 
 
     private User getCurrentUser() {
@@ -212,5 +214,33 @@ public class MovieInteractionController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    //Watched endpointleri
+    @PostMapping("/watched/{imdbId}")
+    public ResponseEntity<Void> watchedMovie(@PathVariable String imdbId) {
+        watchedService.addWatched(getCurrentUser(), imdbId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/watched/{imdbId}")
+    public ResponseEntity<Void> unwatchedMovie(@PathVariable String imdbId) {
+        watchedService.removeWatched(getCurrentUser(), imdbId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/watched")
+    public ResponseEntity<List<WatchedDTO>> getWatcheds() {
+        List<Watched> watcheds = watchedService.getWatched(getCurrentUser());
+
+        List<WatchedDTO> dtos = watcheds.stream()
+                .map(watch -> new WatchedDTO(watch.getId(), watch.getImdbId()))
+                .toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+    @GetMapping("/watched/most-watched")
+    public ResponseEntity<List<String>> getMostWatchedMovies() {
+        return ResponseEntity.ok(watchedService.getMostWatchedMovies(10));
     }
 }
